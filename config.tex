@@ -1,0 +1,28 @@
+\usepackage{amsmath,amssymb,array,tikz}
+\usetikzlibrary{datavisualization,datavisualization.formats.functions}
+\usepackage{caption}
+\captionsetup{font={scriptsize}}
+
+\newcommand{\myvec}[1]{\ensuremath{\boldsymbol{#1}}}
+\newcommand{\gaussiandist}[2]{
+    \frac{1}{\sqrt{2\pi}{#2}}\exp\left(-\frac{(x-#1)^2}{2{#2}^2}\right)
+}
+\newcommand{\ngaussiandist}[3][n]{
+    \frac{1}{(2\pi)^{{#1}/2}|{#3}|^{1/2}}\exp\left(-\frac{1}{2}(\myvec{x}-{#2})^T{#3}^{-1}(\myvec{x}-{#2})\right)
+}
+\newcommand{\ngaussiandistvar}[4][n]{
+    \frac{1}{(2\pi)^{{#1}/2}|{#4}|^{1/2}}\exp\left(-\frac{1}{2}({#2}-{#3})^T{#4}^{-1}({#2}-{#3})\right)
+}
+\newcommand{\intd}{\mathrm{d}}
+\newcommand{\probability}{\ensuremath{\mathbb{P}}}
+\newcommand{\expectation}{\ensuremath{\mathbb{E}}}
+\newcommand{\myeqref}[1]{式(\ref{#1})}
+
+\def\tikzgaussian#1#2{
+    exp(-0.5*(\value{x}-(#1))*(\value{x}-(#1))/((#2)*(#2)))/(sqrt(2*pi)*(#2))
+}
+
+\usepackage{algorithm,algorithmicx,algpseudocode}
+\floatname{algorithm}{算法}
+\renewcommand{\algorithmicrequire}{\textbf{输入：}}  % Use Input in the format of Algorithm  
+\renewcommand{\algorithmicensure}{\textbf{输出：}} % Use Output in the format of Algorithm

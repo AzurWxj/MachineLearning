@@ -1,0 +1,324 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb,ntheorem,faktor}
+\author{Wu Xiaojian}
+\title{Notes on Matrix Derivative in Neural Network}
+\date{August 3rd, 2019}
+%//////////////////
+\newcommand{\Derivative}[2]{\ensuremath{\frac{\partial#1}{\partial#2}}}
+%/////////////////
+\begin{document}
+\maketitle
+\section{Notation}
+Let lower case letters $a,b,c,\cdots$ be scalar values, bold lower case letters $\boldsymbol{v},\boldsymbol{x},\boldsymbol{y},\boldsymbol{z},\cdots$ be vectors and bold upper case letters $\boldsymbol{A},\boldsymbol{B},\boldsymbol{C},\cdots$ be matrices. Detailedly, we have
+\begin{align*}
+    a,b,c,\cdots \in \mathbb{R}&\\
+    \boldsymbol{v}=[v_1,v_2,\cdots,v_n]^T &\quad \text{for}\; \boldsymbol{v}\in\mathbb{R}^n\\
+    \boldsymbol{A}=\begin{bmatrix}
+        a_{11}&\cdots&a_{1n}\\
+        \vdots&\ddots&\vdots\\
+        a_{m1}&\cdots&a_{mn}
+    \end{bmatrix}&\quad \text{for}\; \boldsymbol{A}\in\mathbb{R}^{m\times n}
+\end{align*} 
+We introduce a notation $\delta_{ij,pq}$,  which will be used in the formulas later, as below:
+\begin{equation*}
+    \delta_{ij,pq}=\begin{cases}
+        1\quad\text{if $i=p$ and $j=q$}\\
+        0\quad\text{otherwise}
+    \end{cases}
+\end{equation*}
+in some cases, we are to leave out one term and write $\delta_{i,p}$, meaning $1$ if $i=p$, and $0$ otherwise.
+\section{Derivative of Scalar, Vector and Matrix}
+Let $L\in\mathbb{R},\;\boldsymbol{x}\in\mathbb{R}^n,\;\boldsymbol{y}\in\mathbb{R}^m,\;\boldsymbol{A}\in\mathbb{R}^{m\times n}$, we define derivative operations among them:
+\begin{itemize}
+    \item scalar value and vector \begin{subequations}\begin{align}
+        \Derivative{L}{\boldsymbol{x}}=\left[ 
+            \Derivative{L}{x_1},\Derivative{L}{x_2},\cdots,\Derivative{L}{x_n}
+        \right] \label{eq:derivative of scalar to vector}\\
+        \Derivative{\boldsymbol{x}}{L}=\left[
+            \Derivative{x_1}{L},\Derivative{x_2}{L},\cdots,\Derivative{x_n}{L}
+        \right]^T\label{eq:derivative of vector to scalar}
+    \end{align}
+    \end{subequations}
+    \textbf{NOTICE:} The Derivative of $L$ to $\boldsymbol{x}$ is a \textbf{row vector} of $1\times n$ but not a column vector of the same shape of $\boldsymbol{x}$, while the derivative of $\boldsymbol{x}$ to $L$ is a column vector with the shape consistent to $\boldsymbol{x}$.
+    \item vector to vector \begin{equation}\label{eq:the derivative of vector to vector}
+        \Derivative{\boldsymbol{y}}{\boldsymbol{x}}=\begin{bmatrix}
+            \Derivative{y_1}{\boldsymbol{x}}\\
+            \Derivative{y_2}{\boldsymbol{x}}\\
+            \vdots\\
+            \Derivative{y_m}{\boldsymbol{x}}
+        \end{bmatrix}=\begin{bmatrix}
+            \Derivative{y_1}{x_1}&\Derivative{y_1}{x_2}&\cdots&\Derivative{y_1}{x_n}\\
+            \Derivative{y_2}{x_1}&\Derivative{y_2}{x_2}&\cdots&\Derivative{y_2}{x_n}\\
+            \vdots&\vdots&\ddots&\vdots\\
+            \Derivative{y_m}{x_1}&\Derivative{y_m}{x_2}&\cdots&\Derivative{y_m}{x_n}
+        \end{bmatrix}
+    \end{equation}
+    we give a name to such a matrice as \textbf{Jacobian Matrix}.
+    \item scalar value to matrice \begin{equation}\label{eq:derivative of scalar to matrice}
+        \Derivative{L}{\boldsymbol{A}}=\begin{bmatrix}
+            \Derivative{L}{a_{11}}&\Derivative{L}{a_{21}}&\cdots&\Derivative{L}{a_{m1}}\\
+            \Derivative{L}{a_{12}}&\Derivative{L}{a_{22}}&\cdots&\Derivative{L}{a_{m2}}\\
+            \vdots&\vdots&\ddots&\vdots\\
+            \Derivative{L}{a_{1n}}&\Derivative{L}{a_{2n}}&\cdots&\Derivative{L}{a_{mn}}
+        \end{bmatrix}
+    \end{equation}
+    Like {\sc Equation}\eqref{eq:derivative of scalar to vector}, the result matrice is obtained by applying derivative of $L$ to each entry of $\boldsymbol{A}$ and taking \textbf{transpose operation} on it, so that the shape is $n\times m$ but not $m\times n$.
+\end{itemize}
+
+In multi-variable calculas, we know that if $L=L(y_1,y_2,\cdots,y_n)$ and $y_i=y_i(x_1,x_2,\cdots,x_m)\:(i=1,2,\cdots,n)$, then$$\Derivative{L}{x_k}=\sum_{i=1}^n \Derivative{L}{y_i}\Derivative{y_i}{x_k}$$ 
+(\textbf{NOTICE: } In single-variable derivative, say, $z=f(y),y=g(x)$, by \textbf{chain rule} we have $\frac{\mathrm{d}z}{\mathrm{d}x}=\frac{\mathrm{d}z}{\mathrm{d}y}\frac{\mathrm{d}y}{\mathrm{d}x}$. But in partial derivative, we cannot conclude that $\frac{\partial L}{\partial y_i}\frac{\partial y_i}{\partial x_k}=\frac{\partial L}{\partial x_k}$)
+
+Let's regard these functions in another way. Since $L$ takes $n$ arguments as input, it's natural to rewrite $L$ as $L=L(\boldsymbol{y})=L([y_1,y_2,\cdots,y_n])$, where $y_i=y_i(\boldsymbol{x})=y_i([x_1,x_2,\cdots,x_m])$. Now we call $L$ and $y_i$ \textbf{vector functions}. 
+Hence, by {\sc Equation}\eqref{eq:derivative of scalar to vector} and \eqref{eq:derivative of vector to scalar}, we have
+\newlength{\LenForPrefixIllustrationOfEquation}
+\settowidth{\LenForPrefixIllustrationOfEquation}{(Chain rule for}
+\begin{equation}\label{eq:chain rule for vector funtion}
+    \text{
+        \parbox[c]{0.2\linewidth}{\it Chain rule for vector function}
+    }:\quad\Derivative{L}{x_k}=\Derivative{L}{\boldsymbol{y}}\cdot\Derivative{\boldsymbol{y}}{x_k}
+\end{equation}
+
+\section{Derivatives for Matrix in Neural Network}
+
+In neural network, we assume the prior layer, say, $(w-1)$-th layer, outputs $m$ data $\boldsymbol{X}$, namely $\boldsymbol{X}=[\boldsymbol{x}^{(1)},\boldsymbol{x}^{(2)},\cdots,\boldsymbol{x}^{(m)}]$ where $\boldsymbol{x}^{(i)}=\left[x^{(i)}_1,x^{(i)}_2,\cdots,x^{(i)}_n\right]^T$ ($i=1,2,\cdots,m$, and $x^{(i)}_1,x^{(i)}_2,\cdots,x^{(i)}_n$ are $m$ attributes or features of $\boldsymbol{x}^{(i)}$), to the $w$-th layer. The $w$-th layer takes linear operation on $\boldsymbol{X}$ and outputs $\boldsymbol{Z}$:\begin{equation}
+    \boldsymbol{Z}=\boldsymbol{W}\boldsymbol{X}+\boldsymbol{B}
+\end{equation}
+where $\boldsymbol{W}$ is weight matrix and $\boldsymbol{B}$ is bias matrix:
+\begin{subequations}
+    \begin{gather}
+        \boldsymbol{Z}=\left[
+            \boldsymbol{z}^{(1)},\boldsymbol{z}^{(2)},\cdots,\boldsymbol{z}^{(m)}
+        \right]\\
+        \boldsymbol{W}=\begin{bmatrix}
+            w_{11}&w_{12}&\cdots&w_{1n}\\
+            w_{21}&w_{22}&\cdots&w_{2n}\\
+            \vdots&\vdots&\ddots&\vdots\\
+            w_{p1}&w_{p2}&\cdots&w_{pn}
+        \end{bmatrix},\quad 
+        \boldsymbol{B}=\underbrace{\begin{bmatrix}
+            b_{1}&b_{1}&\cdots&b_{1}\\
+            b_{2}&b_{2}&\cdots&b_{2}\\
+            \vdots&\vdots&\ddots&\vdots\\
+            b_{p}&b_{p}&\cdots&b_{p}
+        \end{bmatrix}}_{\text{$m$ columns}}
+    \end{gather}
+\end{subequations}
+We can multiply $\boldsymbol{W}$ to each entry of $\boldsymbol{X}$
+and therefore,
+\begin{equation}
+    \boldsymbol{z}^{(k)}=
+    \boldsymbol{W}\boldsymbol{x}^{(k)}+\boldsymbol{b}\quad(k=1,2,\cdots,m)
+\end{equation}
+where $\boldsymbol{b}=[b_1,b_2,\cdots,b_p]^T$.
+
+\subsection{For single datum}
+For simplicity, let's first consider the case of only one datum, the $k$-th example: $\boldsymbol{z}^{(k)}=\boldsymbol{W}\boldsymbol{x}^{(k)}+\boldsymbol{b}$, namely\begin{equation}
+    \begin{bmatrix}
+        z^{(k)}_1\\z^{(k)}_2\\\vdots\\z^{(k)}_p
+    \end{bmatrix}=\begin{bmatrix}
+        w_{11}&w_{12}&\cdots&w_{1n}\\
+        w_{21}&w_{22}&\cdots&w_{2n}\\
+        \vdots&\vdots&\ddots&\vdots\\
+        w_{p1}&w_{p2}&\cdots&w_{pn}
+    \end{bmatrix}\begin{bmatrix}
+        x^{(k)}_1\\\vdots\\x^{(k)}_n
+    \end{bmatrix}+\begin{bmatrix}
+        b_1\\b_2\\\vdots\\b_p
+    \end{bmatrix}
+\end{equation}
+It's obvious that ($i=1,2,\cdots,p$)
+\begin{equation}\label{eq:what is z_i^k}
+    z^{(k)}_i=\sum_{j=1}^n w_{ij}x^{(k)}_j+b_i
+\end{equation}
+Let $L^{(k)}:\mathbb{R}^{p}\mapsto\mathbb{R}$ be $L^{(k)}=L^{(k)}(\boldsymbol{z}^{(k)})$. We will evaluate $\Derivative{L^{(k)}}{\boldsymbol{W}}$,  $\Derivative{L^{(k)}}{\boldsymbol{x}^{(k)}}$ and $\Derivative{L^{(k)}}{\boldsymbol{b}}$.
+
+By {\sc Equation}\eqref{eq:derivative of scalar to matrice}, we have
+\begin{equation}
+    \Derivative{L^{(k)}}{\boldsymbol{W}}=\begin{bmatrix}
+        \Derivative{L^{(k)}}{w_{11}}&\Derivative{L^{(k)}}{w_{21}}&\cdots&\Derivative{L^{(k)}}{w_{p1}}\\
+        \Derivative{L^{(k)}}{w_{12}}&\Derivative{L^{(k)}}{w_{22}}&\cdots&\Derivative{L^{(k)}}{w_{p2}}\\
+        \vdots&\vdots&\ddots&\vdots\\
+        \Derivative{L^{(k)}}{w_{1n}}&\Derivative{L^{(k)}}{w_{2n}}&\cdots&\Derivative{L^{(k)}}{w_{pn}} 
+    \end{bmatrix}
+\end{equation}
+Now let's take one entry from matrice above, say, $\Derivative{L^{(k)}}{w_{ij}}$. Since $L^{(k)}=L^{(k)}(\boldsymbol{z}^{(k)})$ and $\boldsymbol{z}^{(k)}=\boldsymbol{z}^{(k)}(\boldsymbol{W})$, by {\sc Equation}\eqref{eq:chain rule for vector funtion}, we have that
+\begin{equation}
+    \Derivative{L^{(k)}}{w_{ij}}=\Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}\Derivative{\boldsymbol{z}^{(k)}}{w_{ij}}
+\end{equation}
+where
+\begin{subequations}
+    \begin{align}
+        \Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}=\left[
+            \Derivative{L^{(k)}}{z^{(k)}_1},
+            \Derivative{L^{(k)}}{z^{(k)}_2},
+            \cdots,
+            \Derivative{L^{(k)}}{z^{(k)}_p}
+        \right]\\
+        \Derivative{\boldsymbol{z}^{(k)}}{w_{ij}}=\left[
+            \Derivative{z^{(k)}_1}{w_{ij}},
+            \Derivative{z^{(k)}_2}{w_{ij}},
+            \cdots,
+            \Derivative{z^{(k)}_p}{w_{ij}}
+        \right]^T
+    \end{align}
+\end{subequations}
+Using {\sc Equation}\eqref{eq:what is z_i^k}, there is, for $h=1,2,\cdots,p$
+\begin{equation}
+    \begin{split}
+        \Derivative{z^{(k)}_h}{w_{ij}}
+        &=\Derivative{}{w_{ij}}\left(\sum_{t=1}^n w_{ht}x^{(k)}_t+b_h\right)\\
+        &=\sum_{t=1}^n \Derivative{w_{ht}}{w_{ij}}x^{(k)}_t\\
+        &=\sum_{t=1}^n \delta_{ij,ht}x^{(k)}_t\\
+        &=\delta_{i,h}x^{(k)}_j
+    \end{split}
+\end{equation}
+This infers that the $i$-th entry of $\Derivative{\boldsymbol{z}^{(k)}}{w_{ij}}$ is $x^{(k)}_j$ while the others are $0$, and so we conclude that
+\begin{equation}
+    \Derivative{L^{(k)}}{w_{ij}}=\Derivative{L^{(k)}}{z_i^{(k)}}x^{(k)}_j
+\end{equation}
+Hence,
+\begin{equation}\label{eq:Lk to W}
+    \begin{split}
+        \Derivative{L^{(k)}}{\boldsymbol{W}}
+        &=\begin{bmatrix}
+            \Derivative{L^{(k)}}{z_1^{(k)}}x_1^{(k)}&\Derivative{L^{(k)}}{z_2^{(k)}}x_1^{(k)}&\cdots&\Derivative{L^{(k)}}{z_p^{(k)}}x_1^{(k)}\\
+            \Derivative{L^{(k)}}{z_1^{(k)}}x_2^{(k)}&\Derivative{L^{(k)}}{z_2^{(k)}}x_2^{(k)}&\cdots&\Derivative{L^{(k)}}{z_p^{(k)}}x_2^{(k)}\\
+            \vdots&\vdots&\ddots&\vdots\\
+            \Derivative{L^{(k)}}{z_1^{(k)}}x_n^{(k)}&\Derivative{L^{(k)}}{z_2^{(k)}}x_n^{(k)}&\cdots&\Derivative{L^{(k)}}{z_p^{(k)}}x_n^{(k)}
+        \end{bmatrix}\\
+        &=\begin{bmatrix}
+            x_1^{(k)}\\
+            x_2^{(k)}\\
+            \vdots\\
+            x_n^{(k)}
+        \end{bmatrix}\begin{bmatrix}
+            \Derivative{L^{(k)}}{z_1^{(k)}}&
+            \Derivative{L^{(k)}}{z_2^{(k)}}&
+            \cdots&
+            \Derivative{L^{(k)}}{z_p^{(k)}}
+        \end{bmatrix}\\
+        &=\boldsymbol{x}^{(k)} \Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}
+    \end{split}
+\end{equation}
+Since the derivative of scalar value w.r.t. a matrice is still a matrice whose size is as the same as that of the transpose of the origin one, it's sometimes very convenient in mechine learning to have the derivative matrice size invariant. Here, we define
+\begin{equation}
+    \nabla_{\boldsymbol{W}}L^{(k)}=\left(\Derivative{L^{(k)}}{\boldsymbol{W}}\right)^T=\left(\Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}\right)^T\left(\boldsymbol{x}^{(k)}\right)^T
+\end{equation} 
+
+Now let's calculate $\Derivative{L^{(k)}}{\boldsymbol{b}}$. Similarly, for $i=1,2,\cdots,p$, we have
+\begin{equation}
+    \begin{split}
+        \Derivative{L^{(k)}}{b_i}
+        &=\Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}\Derivative{\boldsymbol{z}^{(k)}}{b_i}\\
+        &=\Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}\left[
+            \Derivative{z^{(k)}_h}{b_i}
+        \right]^{p\times1}_{(h=1,2,\cdots,p)}\\
+        &=\Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}\left[
+            \Derivative{}{b_i}
+            \left(
+                \sum_{t=1}^n w_{ht}x^{(k)}_t+b_h
+            \right)
+        \right]^{p\times1}_{(h=1,2,\cdots,p)}\\
+        &=\Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}\left[
+            \delta_{h,i}
+        \right]^{p\times1}_{(h=1,2,\cdots,p)}\\
+        &=\Derivative{L^{(k)}}{z^{(k)}_i}\quad\text{(
+            \parbox{0.5\linewidth}{\it The $i$-th component of vector is $1$, while the others are $0$'s.}
+        )}
+    \end{split}
+\end{equation}
+and thus
+\begin{equation}
+    \Derivative{L^{(k)}}{\boldsymbol{b}}=\left[
+        \Derivative{L^{(k)}}{z^{(k)}_1},
+        \Derivative{L^{(k)}}{z^{(k)}_2},
+        \cdots,
+        \Derivative{L^{(k)}}{z^{(k)}_p}
+    \right]=\Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}
+\end{equation}
+we define
+\begin{equation}
+    \nabla_{\boldsymbol{b}}L^{(k)}=\left(
+        \Derivative{L^{(k)}}{\boldsymbol{b}}
+    \right)^T=\left(\Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}\right)^T
+\end{equation}
+
+Finally, let's look at  $\Derivative{L^{(k)}}{\boldsymbol{x}^{(k)}}$. Firstly, according to chain rule, we have
+\begin{equation}
+    \Derivative{L^{(k)}}{\boldsymbol{x}^{(k)}}=\Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}\Derivative{\boldsymbol{z}^{(k)}}{\boldsymbol{x}^{(k)}}
+\end{equation}
+by {\sc Equation}\eqref{eq:the derivative of vector to vector},
+\begin{equation}
+    \begin{split}
+        \Derivative{\boldsymbol{z}^{(k)}}{\boldsymbol{x}^{(k)}}
+        &=\left[\Derivative{z^{(k)}_i}{x^{(k)}_j}\right]^{p\times n}_{ij}\\
+        &=\left[
+            \Derivative{}{x^{(k)}_j}\left(
+                \sum_{t=1}^n w_{it}x^{(k)}_t+b_i
+            \right)
+        \right]^{p\times n}_{ij}\\
+        &=\left[
+            \sum_{t=1}^n w_{it}\delta_{t,j}
+        \right]^{p\times n}_{ij}\\
+        &=\left[
+            w_{ij}
+        \right]^{p\times n}_{ij}
+        =\boldsymbol{W}
+    \end{split}
+\end{equation}
+What a elegant result it is! We can rewrite this formula as
+\begin{equation}
+    \Derivative{\boldsymbol{z}^{(k)}}{\boldsymbol{x}^{(k)}}=
+    \Derivative{\left(\boldsymbol{W}\boldsymbol{x}^{(k)}+\boldsymbol{b}\right)}{\boldsymbol{x}^{(k)}}=\boldsymbol{W}
+\end{equation}
+For digression, this is far analgous to single-variable derivative of linear function $y=kx+b$, which is $\faktor{\mathrm{d}y}{\mathrm{d}x}=k$.
+
+Now back to our topic, we gat
+\begin{equation}
+    \Derivative{L^{(k)}}{\boldsymbol{x}^{(k)}}=\Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}\boldsymbol{W}
+\end{equation}
+and define 
+\begin{equation}
+    \nabla_{\boldsymbol{x}^(k)}L^{(k)}=\left(
+        \Derivative{L^{(k)}}{\boldsymbol{x}^{(k)}}
+    \right)^T=\boldsymbol{W}^T\left(\Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}\right)^T
+\end{equation}
+
+\subsection{For $m$ data}
+At present, let's consider a batch of samples together assembled in matrix form
+\begin{equation}
+    \boldsymbol{Z}=\boldsymbol{W}\boldsymbol{X}+\boldsymbol{B}
+\end{equation}
+Suppose there are $m$ samples, the $m$ columns of $\boldsymbol{Z}$, and let $L=f(\boldsymbol{L})=f(L^{(1)},L^{(2)},\cdots,L^{(m)})$ where $L^{(k)}=L^{(k)}(\boldsymbol{z}^{(k)})$. Up to now, we just put a simple $L$ definition into consideration, which we define as\begin{equation}
+    L=\frac{1}{m}\sum^{m}_{k=1}L^{(k)}
+\end{equation}
+Evalute $\Derivative{L}{\boldsymbol{W}}$, $\Derivative{L}{\boldsymbol{X}}$ respectively.
+
+By {\sc Equation}\eqref{eq:Lk to W}, we have
+\begin{equation}
+    \Derivative{L}{\boldsymbol{W}}=\frac{1}{m}\sum_{k=1}^m \Derivative{L^{(k)}}{\boldsymbol{W}}=\frac{1}{m}\sum_{k=1}^m\boldsymbol{x}^{(k)} \Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}
+\end{equation}
+Beacuse the $(i,j)$-entry of $\boldsymbol{x}^{(k)} \Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}$ is $\Derivative{L^{(k)}}{z^{(k)}_j}x_i^{(k)}$, the sum of these m matrices turns out to be
+\begin{equation}
+    \begin{split}
+        \sum_{k=1}^m\boldsymbol{x}^{(k)} \Derivative{L^{(k)}}{\boldsymbol{z}^{(k)}}
+        &=\left[
+            \sum_{k=1}^m \Derivative{L^{(k)}}{z^{(k)}_j}x_i^{(k)}
+        \right]^{n\times p}_{ij}\\
+        &=\left[
+            x_i^{(k)}
+        \right]^{n\times m}_{ik}\left[
+            \Derivative{L^{(k)}}{z^{(k)}_j}
+        \right]^{m\times p}_{kj}\\
+        &=\boldsymbol{X}\Derivative{L}{\boldsymbol{Z}}
+    \end{split}
+\end{equation}
+so we have 
+\begin{equation}
+    \nabla_{\boldsymbol{W}}L=\left(\Derivative{L}{\boldsymbol{W}}\right)^T=\frac{1}{m}\left(\Derivative{L}{\boldsymbol{Z}}\right)^T\boldsymbol{X}^T=\frac{1}{m}\left(\nabla_{\boldsymbol{Z}}L\right)\boldsymbol{X}^T
+\end{equation}
+Similarly, we have 
+\begin{equation}
+    \nabla_{\boldsymbol{X}}L=\frac{1}{m}\boldsymbol{W}^T\left(\nabla_{\boldsymbol{Z}}L\right)
+\end{equation}
+\end{document}

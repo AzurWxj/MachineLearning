@@ -1,0 +1,359 @@
+\documentclass{article}
+\usepackage{amsmath,amsbsy,amssymb}
+\usepackage[thmmarks]{ntheorem}
+\author{Wu Xiaojian}
+\title{Notes on Matrix Derivative and Trace}
+\date{July 27,2019}
+%/////////////User-defined Commonds
+\newcommand{\Matrix}[3]{
+    \begin{bmatrix}
+        #1_{1,1}&#1_{1,2}&\cdots&#1_{1,#3}\\
+        #1_{2,1}&#1_{2,2}&\cdots&#1_{2,#3}\\
+        \vdots&\vdots&\ddots&\vdots\\
+        #1_{#2,1}&#1_{#2,2}&\cdots&#1_{#2,#3}
+    \end{bmatrix}
+}
+\newcommand{\MatrixDerivativeCompleteForm}[4]{
+    \begin{bmatrix}
+        \frac{\partial#1}{\partial#2_{1,1}}&\frac{\partial#1}{\partial#2_{1,2}}&\cdots&\frac{\partial#1}{\partial#2_{1,#4}}\\
+        \frac{\partial#1}{\partial#2_{2,1}}&\frac{\partial#1}{\partial#2_{2,2}}&\cdots&\frac{\partial#1}{\partial#2_{2,#4}}\\
+        \vdots&\vdots&\ddots&\vdots\\
+        \frac{\partial#1}{\partial#2_{#3,1}}&\frac{\partial#1}{\partial#2_{#3,2}}&\cdots&\frac{\partial#1}{\partial#2_{#3,#4}}
+    \end{bmatrix}
+}
+\newcommand{\MatrixDerivative}[2]{
+    \ensuremath{\frac{\partial#1}{\partial#2}}
+}
+\newcommand{\Transpose}{\ensuremath{\mathrm{T}}}
+\newcommand{\Trace}{\ensuremath{\mathbf{tr}}}
+\newcommand{\Differential}{\ensuremath{\mathrm{d}}}
+\newcommand{\MatrixSymbol}[1]{\ensuremath{{\boldsymbol{#1}}}}
+\newcommand{\MatrixX}{\MatrixSymbol{X}}
+\newcommand{\MatrixY}{\MatrixSymbol{Y}}
+\newcommand{\MatrixZ}{\MatrixSymbol{Z}}
+\newcommand{\MatrixM}{\MatrixSymbol{M}}
+
+\newtheorem{Example}{Example}[section]
+
+\theoremsymbol{$\square$}
+\qedsymbol{$\square$}
+\newtheorem{Theorem}{Theorem}[section]
+
+\theoremstyle{nonumberplain}
+\theoremsymbol{$\blacksquare$}
+\newtheorem{Solution}{Solution}
+\newtheorem{Proof}{\textit{\textbf{Proof}}}
+%////////////////////////////////
+\begin{document}
+\maketitle
+
+\section{Notation}
+
+Let 
+\begin{equation}
+    f:\mathbb{R}^{m\times n}\mapsto \mathbb{R}
+\end{equation} be a scalar function, taking matrix of $m\times n$ shape as input, and throwing out a real number as output. 
+By convention, we use bold capitalized letters such as $\MatrixSymbol{X},\MatrixSymbol{Y}$ to denote matrix, as follows
+\begin{equation*}
+    \MatrixSymbol{X}=\Matrix{x}{m}{n}
+\end{equation*}
+
+We define the derivative of $f$ with respect to $\MatrixX$ as 
+\begin{equation}
+    \MatrixDerivative{f}{\MatrixX}=\MatrixDerivativeCompleteForm{f}{x}{m}{n}
+\end{equation}
+that is, the derivative applies to each elements of $\MatrixX$ and is still a matrix with the same shape as $\MatrixX$, much like to the broadcast operation upon a matrix which applies the specified operation to all the elements and remains the shape. Similarly, we define the differential of $\MatrixX$ as
+\begin{equation}
+    \Differential\MatrixX=\Matrix{\Differential x}{m}{n}
+\end{equation}
+
+Finally, let's introduce \textit{trace}. For a square $\MatrixX^{n\times n}$, we use $\Trace(\MatrixX)$ to represent the trace of $\MatrixX$, the sum of those among in the main diagonal of $\MatrixX$
+\begin{equation}
+    \Trace(\MatrixX)=\sum_{i=1}^{n}x_{i,i}
+\end{equation}
+which shows\footnote{We assume all matrix we discussing here are real matrix.} $\Trace(\MatrixX)\in\mathbb{R}$. 
+
+\section{Inner Product of Matrix}
+
+For any $\MatrixSymbol{v},\MatrixSymbol{k}\in\mathbb{R}^n$,their inner product can be defined as 
+\begin{equation*}
+    \langle \MatrixSymbol{v},\MatrixSymbol{k} \rangle=\MatrixSymbol{v}^\Transpose\MatrixSymbol{k}=\sum_{i=1}^n v_ik_i
+\end{equation*} 
+It's very natural to borrow this concept and define the \textit{inner product of matrix}. Suppose $\MatrixSymbol{A},\MatrixSymbol{B}$ are matrix of the shame shape $m\times n$,their inner product is
+\begin{equation*}
+    \langle \MatrixSymbol{A},\MatrixSymbol{B} \rangle_{m\times n} =\sum_{\substack{1\leqslant j\leqslant m\\1\leqslant i\leqslant n} }a_{i,j}b_{i,j}
+\end{equation*}
+that is, the sum of product entrywise of two matrix. Now that we have defined trace, we can use trace to define inner product of matrix, in a elegant way.
+
+\begin{Theorem}\label{theorem:the relationship between inner product of matrix and its trace}
+    Suppose $\MatrixSymbol{A},\MatrixSymbol{B}$ are matrix of the shame shape $m\times n$, then
+    \begin{equation}
+        \langle \MatrixSymbol{A},\MatrixSymbol{B} \rangle = \Trace(\MatrixSymbol{A}^\Transpose \MatrixSymbol{B})
+    \end{equation}
+    \qed
+\end{Theorem}
+\begin{Proof}
+    Suppose $\MatrixSymbol{A}=[\alpha_1,\alpha_2,\dotsc,\alpha_n]\;, \MatrixSymbol{B}=[\beta_1,\beta_2,\dotsc,\beta_n]$ where $\alpha_i,\beta_i$ are column vectors, then $\MatrixSymbol{A}^\Transpose=[\alpha_1^\Transpose,\alpha_2^\Transpose,\cdots,\alpha_n^\Transpose]^\Transpose$, and 
+    \begin{equation*}
+        A^\Transpose B=\begin{bmatrix}
+            \alpha_1^\Transpose\\
+            \alpha_2^\Transpose\\
+            \vdots\\
+            \alpha_n^\Transpose\\
+        \end{bmatrix}\begin{bmatrix}
+            \beta_1,\beta_2,\cdots,\beta_n
+        \end{bmatrix}=\begin{bmatrix}
+            \alpha_1^\Transpose \beta_1 &&&\\
+            & \alpha_2^\Transpose \beta_2 &&\\
+            &&\ddots&\\
+            &&&\alpha_n^\Transpose \beta_n
+        \end{bmatrix}
+    \end{equation*} 
+    the other entries of which are not important and can be omitted. Then
+    \begin{equation*}
+        \Trace(\MatrixSymbol{A}^\Transpose \MatrixSymbol{B})=
+        \sum_{j=1}^n \alpha_j^\Transpose \beta_j=\sum_{j=1}^n \sum_{i=1}^m a_{ij}b_{ij}=\langle \MatrixSymbol{A},\MatrixSymbol{B} \rangle
+    \end{equation*}
+    \qed
+\end{Proof}
+
+
+
+\section{Derivative of Multi-variable Function}
+Recall that in multi-variable caluculus, the \textit{complete differential} of $f$ with respect to variables $x_1,x_2,\cdots,x_n$ is 
+\begin{equation*}
+    \Differential f=\sum_{i=1}^n \frac{\partial f}{\partial x_i}\Differential x_i
+\end{equation*}
+Using nabla operator $\nabla=[\frac{\partial}{\partial x_1},\frac{\partial}{\partial x_2},\cdots,\frac{\partial}{\partial x_n}]^\Transpose$, we rewrite the complete differential above as more gracefully as
+\begin{equation}
+    \Differential f=\nabla f \cdot \Differential \MatrixSymbol{x}=(\nabla f)^\Transpose\Differential \MatrixSymbol{x}
+\end{equation}
+where
+\begin{equation*}
+    \nabla f=[\frac{\partial f}{\partial x_1},\frac{\partial f}{\partial x_2},\cdots,\frac{\partial f}{\partial x_n}]^\Transpose
+    \quad \text{and} \quad 
+    \Differential\MatrixSymbol{x}=[\Differential x_1,\Differential x_2,\cdots,\Differential x_n]^\Transpose
+\end{equation*} 
+
+Now we can generalize this concept to matrix, say, the complete differential of $f$ with respect to $\MatrixX_{m\times n}$, and so we have
+\begin{equation}
+    \Differential f\big|_\MatrixX=\sum_{i=1}^m\sum_{j=1}^n \frac{\partial f}{\partial x_{i,j}}\Differential x_{i,j}
+\end{equation}
+in most cases, if context agrees, we can denote it shortly as $\Differential f$.
+
+\begin{Example}\label{example:2-1}
+    Suppose \begin{equation*}
+        \MatrixX=\begin{bmatrix}
+            x_{11}&x_{12}&x_{13}\\
+            x_{21}&x_{22}&x_{23}\\
+        \end{bmatrix}
+    \end{equation*}
+    we have
+    \begin{equation*}
+        \frac{\partial f}{\partial \MatrixX}=
+        \begin{bmatrix}
+            \frac{\partial f}{\partial x_{11}}&\frac{\partial f}{\partial x_{12}}&\frac{\partial f}{\partial x_{13}}\\
+            \frac{\partial f}{\partial x_{21}}&\frac{\partial f}{\partial x_{22}}&\frac{\partial f}{\partial x_{23}}
+        \end{bmatrix}
+        \quad \text{and} \quad
+        \Differential \MatrixX=\begin{bmatrix}
+            \Differential x_{11}&\Differential x_{12}&\Differential x_{13}\\
+            \Differential x_{21}&\Differential x_{22}&\Differential x_{23}
+        \end{bmatrix}
+    \end{equation*}
+    Let's transpose the derivative and multiply them, and we can get
+    \begin{equation*}
+        \begin{split}
+            &\left(\frac{\partial f}{\partial \MatrixX}\right)^\Transpose \Differential \MatrixX=\\
+            &\qquad\qquad\begin{bmatrix}
+                \frac{\partial f}{\partial x_{11}}\Differential x_{11}+\frac{\partial f}{\partial x_{21}}\Differential x_{21}&&\\
+                &&\frac{\partial f}{\partial x_{12}}\Differential x_{12}+\frac{\partial f}{\partial x_{22}}\Differential x_{22}&\\
+                &&&\frac{\partial f}{\partial x_{13}}\Differential x_{13}+\frac{\partial f}{\partial x_{23}}\Differential x_{23}
+            \end{bmatrix}
+        \end{split}
+    \end{equation*}
+    It's very obvious that\begin{equation}
+        \Trace\left(
+            \left(\frac{\partial f}{\partial \MatrixX}\right)^\Transpose \Differential \MatrixX
+        \right)=\sum_{i=1}^2 \sum_{j=1}^3 \MatrixDerivative{f}{x_{ij}}\Differential x_{ij}=\Differential f
+    \end{equation}
+\end{Example}
+
+In {\sc Example}(\ref{example:2-1}) we find it seems that the trace of the multiplication between the transpose of derivative of $f$ with respect to $\MatrixX$ and the differential of $\MatrixX$ equals to the differential of $f$. In fact, we have the theorem, as follows
+\begin{Theorem}
+    Suppose $\MatrixX\in\mathbb{R}^{m\times n}$ and $f:\mathbb{R}^{m\times n}\mapsto \mathbb{R}$, then
+    \begin{equation}
+        \Differential f=\langle\frac{\partial f}{\partial \MatrixX},\Differential \MatrixX\rangle=\Trace\left(
+            \left(\frac{\partial f}{\partial \MatrixX}\right)^\Transpose \Differential \MatrixX
+        \right) 
+    \end{equation}
+\end{Theorem} 
+\begin{Proof}
+    By {\sc Theorem}(\ref{theorem:the relationship between inner product of matrix and its trace}), we have
+    \begin{equation*}
+        \langle\frac{\partial f}{\partial \MatrixX},\Differential \MatrixX\rangle=\Trace\left(
+            \left(\frac{\partial f}{\partial \MatrixX}\right)^\Transpose \Differential \MatrixX
+        \right) 
+    \end{equation*}
+    On the other hand, since the inner product of two matrix is the sum of each product entrywise of the two, that is, 
+    \begin{equation*}
+        \langle\frac{\partial f}{\partial \MatrixX},\Differential \MatrixX\rangle=\sum_{i,j} \frac{\partial f}{\partial x_{i,j}} \Differential x_{i,j}
+    \end{equation*}
+    we have $\Differential f=\langle\frac{\partial f}{\partial \MatrixX},\Differential \MatrixX\rangle$, and thus the theorem holds.
+\end{Proof}
+
+
+\section{Matrix Differential}
+Analogous to laws of derivative on real-valued function, we can define the derivative of matrix and derive some operation laws from it.
+
+\begin{Theorem}[Basic Laws of Arithmetic Operations]
+    \begin{gather}
+        \Differential (\MatrixX\pm\MatrixY)=\Differential\MatrixX\pm\Differential\MatrixY\\
+        \Differential(\MatrixX\MatrixY)=(\Differential\MatrixX)\MatrixY+\MatrixX(\Differential\MatrixY)\\
+        \Differential(\MatrixX\odot\MatrixY)=\Differential(\MatrixX)\odot\MatrixY+\MatrixX\odot\Differential(\MatrixY)
+    \end{gather}
+    where $\odot$ is \textbf{Hadamard Product}(also known as the \textbf{Schur product} or the \textbf{Entrywise Product}) is a binary operation that takes two matrices of the same dimensions, and produces another matrix where each element ij is the product of elements ij of the original two matrices. It should not be confused with the more common matrix product.
+\end{Theorem}
+\begin{Proof}
+    \begin{equation*}
+        \begin{split}
+            \Differential(\MatrixX\pm\MatrixY)&=\begin{bmatrix}
+                \Differential(x_{11}\pm y_{11})&\cdots&\Differential(x_{1n}\pm y_{1n})\\
+                \vdots&\ddots&\vdots\\
+                \Differential(x_{m1}\pm y_{m1})&\cdots&\Differential(x_{mn}\pm y_{mn})
+            \end{bmatrix}\\
+            &=\begin{bmatrix}
+                \Differential x_{11}\pm \Differential y_{11}&\cdots&\Differential x_{1n}\pm \Differential y_{1n}\\
+                \vdots&\ddots&\vdots\\
+                \Differential x_{m1}\pm \Differential y_{m1}&\cdots&\Differential x_{mn}\pm \Differential y_{mn}
+            \end{bmatrix}\\
+            &=\begin{bmatrix}
+                \Differential x_{11}&\cdots&\Differential x_{1n}\\
+                \vdots&\ddots&\vdots\\
+                \Differential x_{m1}&\cdots&\Differential x_{mn}
+            \end{bmatrix}\pm \begin{bmatrix}
+                \Differential y_{11}&\cdots&\Differential y_{1n}\\
+                \vdots&\ddots&\vdots\\
+                \Differential y_{m1}&\cdots&\Differential y_{mn}
+            \end{bmatrix}\\
+            &=\Differential \MatrixX \pm \Differential \MatrixY
+        \end{split}
+    \end{equation*}
+    \begin{equation*}
+        \Differential(\MatrixX\MatrixY)
+            =\Differential\left( \begin{bmatrix}
+                x_{11}&x_{12}&\cdots&x_{1n}\\
+                \vdots&\vdots&\cdots&\vdots\\
+                x_{m1}&x_{n2}&\cdots&x_{mn}
+            \end{bmatrix}\begin{bmatrix}
+                y_{11}&\cdots&y_{1t}\\
+                y_{21}&\cdots&y_{2t}\\
+                \vdots&\cdots&\vdots\\
+                y_{n1}&\cdots&y_{nt}
+            \end{bmatrix}
+            \right)=
+            \Differential\begin{bmatrix}
+                z_{11}&\cdots&z_{1t}\\
+                \vdots&\ddots&\vdots\\
+                z_{n1}&\cdots&z_{nt}
+            \end{bmatrix}
+    \end{equation*}
+    where $z_{ij}=\sum_{k=1}^n x_{ik}y_{kj}$, so 
+    \begin{equation*}
+        \Differential z_{ij}=\Differential\sum_{k=1}^n x_{ik}y_{kj} = \sum_{k=1}^n \Differential(x_{ik})y_{kj} + \sum_{k=1}^n x_{ik}\Differential(y_{kj})
+    \end{equation*}
+    For the last two items, we can convert each of them back to the form of matrix multiplication and so we will get
+    \begin{equation*}
+        \Differential \MatrixSymbol{Z}=\Differential(\MatrixX)\MatrixY+\MatrixX\Differential(\MatrixY)
+    \end{equation*} 
+    The proof of the hadamard product is similar.
+\end{Proof}
+
+\begin{Theorem}
+    \begin{gather}
+        \Differential(\MatrixX^\Transpose)=(\Differential\MatrixX)^\Transpose\\
+        \Differential(\Trace(\MatrixX))=\Trace(\Differential\MatrixX)
+    \end{gather}
+\end{Theorem}
+\begin{Theorem}[Differential of Constant Matrix]
+    Assume \MatrixSymbol{C} is a constant matrix, then 
+    \begin{equation}
+        \Differential(\MatrixSymbol{C})=O
+    \end{equation}
+\end{Theorem}
+\begin{Theorem}[Differential of Inverse of Matrix]
+    Suppose \MatrixX is invertable, and its inverse is $\MatrixX^{-1}$, then 
+    \begin{equation}
+        \Differential(\MatrixX^{-1})=-\MatrixX^{-1}\Differential(\MatrixX)\MatrixX^{-1}
+    \end{equation}
+\end{Theorem}
+\begin{Proof}
+    Let $\MatrixSymbol{I}$ be identity.Since \MatrixX is invertable, therefore $\Differential\MatrixSymbol{I}=\Differential(\MatrixX\MatrixX^{-1})$. Notice \MatrixSymbol{I} is a constant matrix, thus $\Differential\MatrixSymbol{I}=O$ and 
+    \begin{equation*}
+        \Differential(\MatrixX\MatrixX^{-1})=\Differential(\MatrixX)\MatrixX^{-1}+\MatrixX\Differential(\MatrixX^{-1})=O
+    \end{equation*}
+    This concludes that $\Differential(\MatrixX^{-1})=-\MatrixX^{-1}\Differential(\MatrixX)\MatrixX^{-1}$.
+\end{Proof}
+\begin{Theorem}[Chain Rule]
+    Let $\sigma$ is a scalar function, and we define the broadcast operation as
+    \begin{equation*}
+        \sigma(\MatrixX)=\begin{bmatrix}
+            \sigma(x_{11})&\cdots&\sigma(x_{1n})\\
+            \vdots&\ddots&\vdots\\
+            \sigma(x_{m1})&\cdots&\sigma(x_{mn})
+        \end{bmatrix}
+    \end{equation*}
+    then\begin{equation}
+        \Differential\left(\sigma(\MatrixX)\right)=\sigma'(\MatrixX)\odot\Differential\MatrixX
+    \end{equation}
+\end{Theorem}
+\begin{Proof}
+    \begin{equation*}
+        \begin{split}
+            \Differential\left(\sigma(\MatrixX)\right)&=\begin{bmatrix}
+                \Differential\sigma(x_{11})&\cdots&\Differential\sigma(x_{1n})\\
+                \vdots&\ddots&\vdots\\
+                \Differential\sigma(x_{m1})&\cdots&\Differential\sigma(x_{mn})
+            \end{bmatrix}\\
+            &=\begin{bmatrix}
+                \sigma'(x_{11})\Differential x_{11}&\cdots&\sigma'(x_{1n})\Differential x_{1n}\\
+                \vdots&\ddots&\vdots\\
+                \sigma'(x_{m1})\Differential x_{m1}&\cdots&\sigma'(x_{mn})\Differential x_{mn}
+            \end{bmatrix}\\
+            &=\begin{bmatrix}
+                \sigma'(x_{11})&\cdots&\sigma'(x_{1n})\\
+                \vdots&\ddots&\vdots\\
+                \sigma'(x_{m1})&\cdots&\sigma'(x_{mn})
+            \end{bmatrix}\odot\begin{bmatrix}
+                \Differential x_{11}&\cdots&\Differential x_{1n}\\
+                \vdots&\ddots&\vdots\\
+                \Differential x_{m1}&\cdots&\Differential x_{mn}
+            \end{bmatrix}\\
+            &=\sigma'(\MatrixX)\odot\Differential\MatrixX
+        \end{split}
+    \end{equation*}
+\end{Proof}
+
+\section{Trace}
+\begin{Theorem}
+    Suppose $a,b,c$ is scalar value, $\MatrixX,\MatrixY\in\mathbb{R}^{m\times n}$, $\MatrixZ\in\mathbb{R}^{n\times m}$. Here are some properties about trace
+    \begin{gather}
+        \Trace(c)=c\\
+        \Trace(\MatrixX^\Transpose)=\Trace(\MatrixX)\\
+        \Trace(a\MatrixX\pm b\MatrixY)=a\Trace(\MatrixX)\pm b\Trace(\MatrixY)\\
+        \Trace(\MatrixX\MatrixZ)=\Trace(\MatrixZ\MatrixX)
+    \end{gather}
+\end{Theorem}
+\begin{Proof}
+    we just proof the last one. Since the $(i,j)$-entry of $\MatrixX\MatrixZ$ is $\sum_{k=1}^{n}x_{ik}z_{kj}$, and that of $\MatrixZ\MatrixX$ is $\sum_{p=1}^{m}z_{ip}x_{pj}$, thus 
+    \begin{equation*}
+        \Trace(\MatrixX\MatrixZ)=\sum_{p=1}^m \sum_{k=1}^{n} x_{pk}z_{kp}=\sum_{k=1}^{n}\sum_{p=1}^m z_{kp}x_{pk}=\Trace(\MatrixZ\MatrixX)
+    \end{equation*}
+    We can also infer from this property that if $\MatrixX_1\MatrixX_2\cdots\MatrixX_n$ and $\MatrixX_n\MatrixX_1\cdots\MatrixX_{n-1}$ are both defined, then
+    \begin{equation}
+        \Trace(\MatrixX_1\MatrixX_2\cdots\MatrixX_n)=\Trace(\MatrixX_n\MatrixX_1\cdots\MatrixX_{n-1})
+    \end{equation} 
+    The proof is very easy that using $\Trace(\MatrixX\MatrixZ)=\Trace(\MatrixZ\MatrixX)$, let $\MatrixX=\MatrixX_1\MatrixX_2\cdots\MatrixX_{n-1}$ and $\MatrixZ=\MatrixX_n$ and so we make it.
+\end{Proof}
+
+\end{document}

@@ -1,0 +1,549 @@
+\documentclass[a4paper,UTF8]{article}
+\usepackage{ctex}
+\input{../config}
+\input{localconfig}
+\title{混合高斯分布和EM算法}
+\author{Wu X.J. }
+\date{2020年4月23日}
+\hyphenation{Maximi-za-tion-step expecta-tion}
+\begin{document}
+
+\maketitle
+\tableofcontents 
+
+\section{高斯混合模型}
+
+\subsection{数学模型}
+定义一维高斯分布（或称为正态分布）为\(x\sim\mathcal{N}(\mu,\sigma^2)\)，其概率密度函数是\[
+    f(x)=\gaussiandist{\mu}{\sigma}
+\]
+图\ref{pic:1}显示了一维正态分布的概率密度函数的情况。
+\begin{figure}
+    \centering
+    \tikz\datavisualization[
+        scientific axes=clean,
+        visualize as smooth line/.list={1,2,3,4},
+        style sheet=vary hue,
+        x axis={
+            length=8cm, 
+            grid={major also at={2,4,6,8}},
+            ticks={major at={0,2,4,6,8,15,20,25}}
+        },
+        1={label in legend={text={$\mu=2,\sigma=2$}}},
+        2={label in legend={text={$\mu=4,\sigma=3$}}},
+        3={label in legend={text={$\mu=6,\sigma=4$}}},
+        4={label in legend={text={$\mu=8,\sigma=5$}}},
+    ]data[format=function]{
+        var set : {1,2,3,4};
+        var x : interval [-10:25] samples 50;
+        func y = \tikzgaussian{\value{set}*2}{\value{set}+1};
+    };
+    \caption{一维正态分布中不同的期望和方差的选择}\label{pic:1}
+\end{figure}
+
+而对于多维的高斯分布，考虑\(n\)个随机变量组成的随机变量向量\(\myvec{x}\in\mathbb{R}^n\)，期望为\(\myvec{\mu}\)，其中\(\mu_i\)表示随机变量\(x_i\)的期望，以及协方差矩阵\(\myvec{\Sigma}\in\mathcal{M}_{n\times n}\)，于是多维随机变量的概率密度函数是\[
+    f(\myvec{x})=\ngaussiandist{\myvec{\mu}}{\myvec{\Sigma}}
+\]
+如果按照一定的权重将若干个高斯模型进行叠加，我们就得到了混合的高斯模型。具体来说，设\(\alpha_i>0(i=1,2,\dotsc,k)\)且\(\sum_i\alpha_i=1\)，则定义混合的概率密度函数为\begin{equation}\label{eq:gmm}
+    f(\myvec{x})=\sum_{i=1}^k\alpha_if_i(\myvec{x})
+\end{equation}其中\begin{equation}
+    f_i(\myvec{x})=\ngaussiandist{\myvec{\mu}_i}{\myvec{\Sigma}_i}
+\end{equation}这仍然是满足概率密度的定义，因为\begin{equation}
+    \int_{\myvec{x}}f(\myvec{x})\intd \myvec{x}=\int_{\myvec{x}}\sum_{i=1   }^k\alpha_if_i(\myvec{x})\intd \myvec{x}=\sum_{i=1}^k\alpha_i\int_{\myvec{x}}f_i(\myvec{x})\intd \myvec{x}=\sum_{i=1}^k\alpha_i=1
+\end{equation}图\ref{pic:2}是一维情况下，将两个高斯模型\(x\sim\mathcal{N}(0,1)\)和\(x\sim\mathcal{N}(10,5)\)按照权重系数\(0.5,0.5\)混合后的概率密度图像。
+\begin{figure}
+    \centering
+    \tikz\datavisualization[
+        scientific axes=clean,
+        visualize as smooth line,
+        style sheet=vary hue
+    ]data[format=function]{
+        var x : interval[-10:30] samples 100;
+        func y = 0.5*(\tikzgaussian{0}{1})+0.5*(\tikzgaussian{10}{5});
+    };
+    \caption{\(x\sim\mathcal{N}(0,1)\)和\(x\sim\mathcal{N}(10,5)\)按照权重系数\(0.5,0.5\)混合后的概率密度图}\label{pic:2}
+\end{figure}
+
+
+\subsection{为什么需要混合高斯模型}
+设有若干数据的数据集，并且假定每一个数据由且仅由某一个特定的高斯分布所产生，如果我们使用单一的高斯模型去拟合此数据集（如极大似然估计）可能会得出不合理的模型出来。考虑图\ref{pic:3}的数据分布情况，其数据是由两个高斯分布所组成的。左图使用了单一的高斯分布模型去拟合，其结果显然不合理，因为在中心处分布的数据点反而少；右图使用了混合的高斯模型去拟合，其结果与实际情况比较符合。\begin{equation*}
+    \myvec{x}\sim\mathcal{N}(\myvec{\mu}_1,\myvec{\Sigma}_1),\;\myvec{x}\sim\mathcal{N}(\myvec{\mu}_2,\myvec{\Sigma}_2)
+\end{equation*}其中\begin{equation*}
+    \myvec{\mu}_1=\begin{bmatrix}
+        -1\\-1
+    \end{bmatrix},\myvec{\Sigma}_1=\begin{bmatrix}
+        1&0.3\\0.3&5
+    \end{bmatrix},\myvec{\mu}_2=\begin{bmatrix}
+        3\\3
+    \end{bmatrix},\myvec{\Sigma}_1=\begin{bmatrix}
+        1&0.4\\0.4&2
+    \end{bmatrix}
+\end{equation*}
+\begin{figure}
+    \centering
+    \tikz\datavisualization[
+        scientific axes,
+        visualize as scatter/.list={1,2},
+        style sheet=vary hue,
+        style sheet=cross marks,
+        y axis={include value={8,-8}},
+        x axis={include value={-5,7}},
+        1={
+            label in legend={
+                text={},text colored
+            }
+        },
+        2={
+            label in legend={
+                text={},text colored
+            }
+        },
+        legend={matrix node style={font=\footnotesize},south outside,label style=text only},
+    ]
+    data[set=1,headline={x,y},read from file=\datafilepath{multigaussian1.csv}]
+    data[set=2,headline={x,y},read from file=\datafilepath{multigaussian2.csv}]
+    info{
+        \coordinate (d1 center) at (visualization cs:x=1,y=1);
+        \draw[rotate around={30:(d1 center)}] 
+            (d1 center) ellipse[x radius=2,y radius=1]
+            (d1 center) ellipse[x radius=1,y radius=0.5]
+            (d1 center) ellipse[x radius=.5,y radius=0.25];
+    };
+    \tikz\datavisualization[
+        scientific axes,
+        visualize as scatter/.list={1,2},
+        1={
+            label in legend={
+                text={$\myvec{x}\sim\mathcal{N}(\myvec{\mu}_1,\myvec{\Sigma}_1)$},text colored
+            }
+        },
+        2={
+            label in legend={
+                text={$\myvec{x}\sim\mathcal{N}(\myvec{\mu}_2,\myvec{\Sigma}_2)$},text colored
+            }
+        },
+        legend={matrix node style={font=\footnotesize},south outside},
+        style sheet=vary hue,
+        style sheet=cross marks,
+        y axis={include value={8,-8}},
+        x axis={include value={-5,7}}
+    ]
+    data[set=1,headline={x,y},read from file=\datafilepath{multigaussian1.csv}]
+    data[set=2,headline={x,y},read from file=\datafilepath{multigaussian2.csv}]
+    info{
+        \coordinate (d1 center) at (visualization cs:x=-1,y=-1);
+        \coordinate (d2 center) at (visualization cs:x=3,y=3);
+        \draw[rotate around={30:(d1 center)}] 
+            (d1 center) ellipse[x radius=1,y radius=0.5]
+            (d1 center) ellipse[x radius=.5,y radius=0.25];
+        \draw[rotate around={20:(d2 center)}] 
+            (d2 center) ellipse[x radius=1,y radius=0.5]
+            (d2 center) ellipse[x radius=.5,y radius=0.25];
+    };
+    \caption{左：使用单一的高斯分布模型拟合数据集；右：使用混合的高斯模型来拟合。}\label{pic:3}
+\end{figure}
+
+混合高斯模型的本质就是融合几个单一高斯模型使得模型更加复杂，从而产生更复杂的样本。理论上，如果某个混合高斯模型融合的高斯模型个数足够多，它们之间的权重设定得足够合理，这个混合模型可以拟合任意分布的样本。
+
+\subsection{权重系数的解释}
+
+因为高斯混合模型的概率密度函数\ref{eq:gmm}中的系数\(a_i\)满足\(0\leqslant a_i \leqslant 1\)，我们可以将其视为一个概率：即\textbf{ 选择第$i$个模型的先验概率}。换句话说，给定一个随机变量\myvec{x}，它有\(a_i\)的概率是由第$i$个模型所产生的，在此条件下\myvec{x}的概率就是\(f_i(\myvec{x})\)，因此可以将概率写为\begin{equation}
+    \probability(\myvec{x})=\sum_{i=1}^k\probability_{model}(k)\probability(\myvec{x}|model=k)=\sum_{i=1}^k\alpha_i f_i(\myvec{x})
+\end{equation}我们将在第\ref{section:gmm mle}节中使用到这一思路。
+
+\section{GMM的极大似然估计}\label{section:gmm mle}
+设有\(n\)个样本的样本集\(Y=\{\myvec{y}^{(i)},i=1,2,\dotsc,n\}\)，每一个样本是一个\(m\)维随机变量的观测值：\(\myvec{y}^{(i)}\in\mathbb{R}^m\)。假设这些样本每一个观测值都\textbf{由且仅由\(k\)个高斯分布模型中的一个}所产生：\(\mathcal{N}_i(\myvec{\mu}_i,\myvec{\Sigma}_i),i=1,2,\dotsc,k\)，令\[
+    \myvec{\mu}=\{\myvec{\mu}_1,\myvec{\mu}_2,\dotsc,\myvec{\mu}_k\},\myvec{\Sigma}=\{\myvec{\Sigma}_1,\myvec{\Sigma}_2,\dotsc,\myvec{\Sigma}_k\}
+\]我们现在的任务是，通过极大似然估计来估计出参数\(\myvec{\mu},\myvec{\Sigma}\)。写出极大似然函数\begin{equation}
+    L(\myvec{\mu},\myvec{\Sigma})=\prod_{i=1}^n\probability(\myvec{y}^{(i)};\myvec{\mu},\myvec{\Sigma})
+\end{equation}然后最大化\(L\)即可：\begin{equation}
+    \myvec{\mu},\myvec{\Sigma}=\arg\max_{\myvec{\mu},\myvec{\Sigma}}L(\myvec{\mu},\myvec{\Sigma})
+\end{equation}但是立刻就会有一个问题：我们并不知道任何一个观测数据\(\myvec{y}^{(i)}\)到底是由哪一个高斯模型产生的，换句话说，样本来源这一数据丢失了。为此，我们假设样本来自第\(i\)个高斯模型的先验概率为\(\probability_{model}(i)=\alpha_i\)，从而我们将样本概率写为\begin{equation}
+    \probability(\myvec{y}^{(i)};\myvec{\mu},\myvec{\Sigma})=\sum_{j=1}^k\alpha_j\probability(\myvec{y}^{(i)};\myvec{\mu}_j,\myvec{\Sigma}_j)
+\end{equation}于是极大似然函数就是\begin{equation}
+    L(\myvec{\mu},\myvec{\Sigma})=\prod_{i=1}^n\sum_{j=1}^k\alpha_j\probability(\myvec{y}^{(i)};\myvec{\mu}_j,\myvec{\Sigma}_j)
+\end{equation}两边取对数，得到\begin{equation}
+    \ln L(\myvec{\mu},\myvec{\Sigma})=\sum_{i=1}^n\ln\left(
+        \sum_{j=1}^k\alpha_j\probability(\myvec{y}^{(i)};\myvec{\mu}_j,\myvec{\Sigma}_j)
+    \right)
+\end{equation}然后只要令\(\frac{\partial}{\partial\myvec{\mu}}L=0\)以及\(\frac{\partial}{\partial\myvec{\Sigma}}L=0\)即可。但是仔细分析就会发现对数似然函数里面，对数里面还有求和。实际上没有办法通过求导的方法来求这个对数似然函数的最大值。此时就要用到EM算法。
+
+\section{EM算法}
+最大期望算法（Expectation-Maximization algorithm, EM），或Dempster-Laird-Rubin算法，是一类通过迭代进行极大似然估计的优化算法，通常作为牛顿迭代法的替代用于对包含\textbf{隐变量或缺失数据}的概率模型进行参数估计。EM算法的两个步骤：E-step(expectation-step，期望步)和M-step(Maximization-step,最大化步)。
+
+\subsection{E-Step}
+
+为每一个样本\(\myvec{y}^{(i)}\)引入一个\(k\)维的隐变量(latent variable)\(\myvec{\gamma}^{(i)}\in\mathbb{R}^k\)，如果该样本来自第\(r\)个高斯模型，那么\(\gamma^{(i)}_r=1\)，其余分量均为0。换句话说，该隐变量指明了该样本是来自哪一个高斯分布模型。这样，\((\myvec{y}^{(i)},\myvec{\gamma}^{(i)})\)就构成了第\(i\)个样本的完整描述。
+
+设先验概率\(\Phi=\{\alpha_1,\alpha_2,\dotsc,\alpha_k\}\)，先考虑概率\begin{equation*}
+    \probability\left(\myvec{y}^{(i)},\myvec{\gamma}^{(i)};\myvec{\mu},\myvec{\Sigma},\Phi\right)
+\end{equation*}可以写成条件形式\begin{equation*}
+    \probability\left(\myvec{\gamma}^{(i)};\myvec{\mu},\myvec{\Sigma},\Phi\right)\probability\left(\myvec{y}^{(i)}|\myvec{\gamma}^{(i)};\myvec{\mu},\myvec{\Sigma},\Phi\right)
+\end{equation*}根据隐变量的定义，样本\(\myvec{y}^{(i)}\)来自于第\(r\)个高斯模型当且仅当\(\myvec{\gamma}^{(i)}\)的第\(r\)个分量为1、其余分量为0，从而根据先验概率有\[\probability\left(\myvec{\gamma}^{(i)};\myvec{\mu},\myvec{\Sigma},\Phi\right)=\alpha_r\]另一方面，给定了\(\myvec{\gamma}^{(i)}\)后我们就知道了这个样本是来自于哪一个高斯模型，假设是第\(r\)个，于是就有\[
+    \probability\left(\myvec{y}^{(i)}|\myvec{\gamma}^{(i)};\myvec{\mu},\myvec{\Sigma},\Phi\right)=f_r(\myvec{y}^{(i)})
+\]综上我们就有\begin{equation*}
+    \probability\left(\myvec{y}^{(i)},\myvec{\gamma}^{(i)};\myvec{\mu},\myvec{\Sigma},\Phi\right)=\alpha_r\cdot f_r(\myvec{y}^{(i)})\quad \mathrm{where}\;\;\gamma^{(i)}_r=1
+\end{equation*}考虑到隐变量的取值特性，我们可以写成一个更加紧凑的形式\begin{equation}
+    \probability\left(\myvec{y}^{(i)},\myvec{\gamma}^{(i)};\myvec{\mu},\myvec{\Sigma},\Phi\right)=\prod_{j=1}^k \left(\alpha_j\cdot f_j(\myvec{y}^{(i)})\right)^{\gamma^{(i)}_j}
+\end{equation}于是我们给出基于隐变量（包括先验概率）的极大似然函数\begin{equation}
+    \begin{split}
+        L(\myvec{\mu},\myvec{\Sigma},\Phi)
+        =&\prod_{i=1}^n\probability\left(\myvec{y}^{(i)},\myvec{\gamma}^{(i)};\myvec{\mu},\myvec{\Sigma},\Phi\right)\\
+        =&\prod_{i=1}^n\prod_{j=1}^k \left(\alpha_j\cdot f_j(\myvec{y}^{(i)})\right)^{\gamma^{(i)}_j}
+        =\prod_{j=1}^k\prod_{i=1}^n\alpha^{\gamma^{(i)}_j}_j f_j(\myvec{y}^{(i)})^{\gamma^{(i)}_j}\\
+        =&\prod_{j=1}^k\left(
+            \alpha_j^{\sum_{i=1}^n\gamma_j^{(i)}}\prod_{i=1}^nf_j(\myvec{y}^{(i)})^{\gamma^{(i)}_j}
+        \right)
+    \end{split}
+\end{equation}两边取对数，得到\begin{equation}\label{eq:lnmle}
+    \begin{split}
+        \ln L(\myvec{\mu},\myvec{\Sigma},\Phi)
+        =&\sum_{j=1}^k\ln\left(
+            \alpha_j^{\sum_{i=1}^n\gamma_j^{(i)}}\prod_{i=1}^nf_j(\myvec{y}^{(i)})^{\gamma^{(i)}_j}
+        \right)\\
+        =&\sum_{j=1}^k\left( 
+            \ln\alpha_j\cdot\sum_{i=1}^n\gamma_j^{(i)}+\sum_{i=1}^n\gamma_j^{(i)}\ln f_j(\myvec{y}^{(i)})
+        \right)\\
+    \end{split}
+\end{equation}接下来只要计算\begin{equation*}
+    \arg\max_{\myvec{\mu},\myvec{\Sigma},\Phi}\ln L(\myvec{\mu},\myvec{\Sigma},\Phi)
+\end{equation*}但是到目前为止我们还不能对该对数极大似然函数最大化，因为隐变量\myvec{\gamma}确实还是不知道。因此这里的思路就是使用迭代：
+\\[0.5em]
+\fbox{
+    \parbox{\linewidth}{
+        我们初始时可以给出参数\(\myvec{\mu},\myvec{\Sigma},\Phi\)的一个估计值\(\myvec{\mu}^{(0)},\myvec{\Sigma}^{(0)},\Phi^{(0)}\)（通过随机初始化或者是从样本中估计），通过\(w\)轮迭代优化后得到\(\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)}\)。我们使用本轮得到的参数对隐变量\myvec{\gamma}做进一步的估计，然后用估计出的结果再进行迭代得到\(\myvec{\mu}^{(w+1)},\myvec{\Sigma}^{(w+1)},\Phi^{(w+1)}\)，以此类推。
+    }
+}\\[0.5em]
+具体来说，给定参数估计\(\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)}\)，对于给定样本点\(\myvec{y}^{(i)}\)的条件下，我们首先计算其对应的隐变量中第\(j\)个分量的期望（因为分量只能取\(0,1\)，从而期望在数值上就等于该样本点来自于第\(j\)个高斯模型的概率）。计算期望的作用在于\textbf{ 我们将使用\myvec{\gamma}的期望来代替当前\myvec{\gamma}的值，来进行下一轮迭代}\footnote{
+    另一种理解是考虑离散情况，多维随机变量函数\(f(\myvec{x})\)中对某一个随机变量\(x_i\)求期望，写为\[\expectation_{x_i}(f(\myvec{x}))=\sum_{\xi\in x_i}p(\xi)\cdot f(\myvec{x}\big|_{x_i=\xi})\]于是期望可以理解为\(f\)，如果将\(f\)看作是\(x_i\)的函数的话，取值的平均情况。因此，在后文中我们会计算\(\expectation_\gamma(\ln L)\)，此时就是在求当\(\gamma\)取遍不同值时，极大似然函数函数\(\ln L\)的平均取值情况。
+
+    换句话说，因为\(\gamma\)指示了样本来源于哪一个模型，不同的\(\gamma\)就代表了样本点来自不同高斯模型的可能性，期望就是考虑到所有来源可能后，这些样本点的概率——也就是极大似然函数的意义——的平均值，此时如果我们计算出当参数为\(\myvec{\mu}',\myvec{\Sigma}',\Phi'\)时这个期望（平均值）达到最大，因为平均值提高了，就说明无论这些点来自于哪一个高斯模型（即给定某一\(\gamma\)），新的模型\(\myvec{\mu}',\myvec{\Sigma}',\Phi'\)比原来的模型\(\myvec{\mu},\myvec{\Sigma},\Phi\)\underline{都更有可能产生这些样本点}，这就是极大化期望的意义。
+}：\begin{equation*}
+    \begin{split}
+        \expectation(
+            \gamma^{(i)}_j|\myvec{y}^{(i)};\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)}
+        )
+        =&\probability(\gamma^{(i)}_j=1|\myvec{y}^{(i)};\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)})\\
+        =&\frac{
+            \probability(\gamma^{(i)}_j=1,\myvec{y}^{(i)};\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)})
+        }{
+            \probability(\myvec{y}^{(i)};\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)})
+        }
+    \end{split}
+\end{equation*}分母部分代表的含义是给定一个混合模型\(\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)}\)情况下，一个样本点\(\myvec{y}^{(i)}\)的概率，按照我们之前的计算，它应该是\begin{equation*}
+    \probability(\myvec{y}^{(i)};\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)})=\sum_{j=1}^k\alpha^{(w)}_jf^{(w)}_j(\myvec{y}^{(i)})
+\end{equation*}其中\(\alpha^{(w)}_j\in\Phi^{(w)}\)，\(f^{(w)}_j(\myvec{y}^{(i)})\sim\mathcal{N}(\mu^{(w)}_j,\Sigma^{(w)}_j)\)，均是根据第\(w\)次迭代的结果来计算的。同理，对于分子部分，表示的含义是给定混合模型\(\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)}\)情况下样本点\(\myvec{y}^{(i)}\)确实来自于第\(j\)个高斯模型的概率，它等于选择该高斯模型的先验概率和样本点在此高斯模型中的概率的乘积，即\begin{equation*}
+    \probability(\gamma^{(i)}_j=1,\myvec{y}^{(i)};\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)})=\alpha^{(w)}_jf^{(w)}_j(\myvec{y}^{(i)})
+\end{equation*}于是我们就得到了所求的期望\begin{equation}
+    \expectation(
+            \gamma^{(i)}_j|\myvec{y}^{(i)};\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)}
+        )=\frac{
+            \alpha^{(w)}_jf^{(w)}_j(\myvec{y}^{(i)})
+        }{
+            \sum_{j=1}^k\alpha^{(w)}_jf^{(w)}_j(\myvec{y}^{(i)})
+        }
+\end{equation}我们对式(\ref{eq:lnmle})求关于隐变量\(\gamma\)的期望，记\[
+    \expectation_{\gamma^{(i)}_j}^w=\expectation(
+        \gamma^{(i)}_j|\myvec{y}^{(i)};\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)}
+    )
+\]从而令\begin{equation}\label{eq:Q}
+    \begin{split}
+        Q(\myvec{\mu},\myvec{\Sigma},\Phi;\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)})
+        =&\expectation_\gamma\left(\ln L(\myvec{\mu},\myvec{\Sigma},\Phi);\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)}\right)\\
+        =&\sum_{j=1}^k\left( 
+            \ln\alpha_j\cdot\sum_{i=1}^n\expectation_{\gamma^{(i)}_j}^w+\sum_{i=1}^n\expectation_{\gamma^{(i)}_j}^w\ln f_j(\myvec{y}^{(i)})
+        \right)
+    \end{split}
+\end{equation}
+这样我们只要（再）对\(Q\)做极大似然估计就可以得到下一轮的模型参数估计\begin{equation}
+    \myvec{\mu}^{(w+1)},\myvec{\Sigma}^{(w+1)},\Phi^{(w+1)}=\arg\max_{\myvec{\mu},\myvec{\Sigma},\Phi}Q(\myvec{\mu},\myvec{\Sigma},\Phi;\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)})
+\end{equation}
+
+\subsection{M-step}
+这一步就是对\myeqref{eq:Q}进行最大化\begin{equation}
+    \begin{split}
+        \myvec{\mu}^{(w+1)},\myvec{\Sigma}^{(w+1)},&\Phi^{(w+1)}\\=&\arg\max_{\myvec{\mu},\myvec{\Sigma},\Phi}\sum_{j=1}^k\left( 
+            \ln\alpha_j\cdot\sum_{i=1}^n\expectation_{\gamma^{(i)}_j}^w+\sum_{i=1}^n\expectation_{\gamma^{(i)}_j}^w\ln f_j(\myvec{y}^{(i)})
+        \right)
+    \end{split}
+\end{equation}其中\begin{gather}
+    \expectation_{\gamma^{(i)}_j}^w=\frac{
+        \alpha^{(w)}_jf^{(w)}_j(\myvec{y}^{(i)})
+    }{
+        \sum_{t=1}^k\alpha^{(w)}_tf^{(w)}_t(\myvec{y}^{(i)})
+    }\\
+    f^{(w)}_j(\myvec{y}^{(i)})=\ngaussiandistvar[m]{\myvec{y}^{(i)}}{\myvec{\mu}_j^{(w)}}{\myvec{\Sigma}_j^{(w)}}\\
+    f_j(\myvec{y}^{(i)})=\ngaussiandistvar[m]{\myvec{y}^{(i)}}{\myvec{\mu}_j}{\myvec{\Sigma}_j}\\
+    \sum_{j=1}^k\alpha_j=1
+\end{gather}我们对方程求导并令相应项为0来求最大值。必须要注意到：\(\expectation^{(w)}_{\gamma_j^{(i)}}\)是一个常量，它是根据第\(w\)轮迭代后的模型结果推算出来的期望值。
+
+\begin{itemize}
+    \item \textbf{ 对\(\alpha_j\)求导。} 我们首先对\(\alpha_j\)求导数，注意到还有约束\(\sum_{j=1}^k\alpha_j=1\)，考虑使用Lagrange乘子法来求解，令\begin{equation*}
+        L=\sum_{j=1}^k\left( 
+            \ln\alpha_j\cdot\sum_{i=1}^n\expectation_{\gamma^{(i)}_j}^w+\sum_{i=1}^n\expectation_{\gamma^{(i)}_j}^w\ln f_j(\myvec{y}^{(i)})
+        \right)+\lambda\left(\sum_{j=1}^k\alpha_j-1\right)
+\end{equation*}于是令\begin{equation*}
+        \frac{\partial}{\partial \alpha_j}L
+        =\frac{1}{\alpha_j}\sum_{i=1}^n\expectation_{\gamma^{(i)}_j}^w+\lambda=0
+\end{equation*}得到\begin{equation*}\label{eq:alphaj}
+    \alpha_j=-\frac{1}{\lambda}\sum_{i=1}^n\expectation_{\gamma^{(i)}_j}^w
+\end{equation*}根据约束条件又有\begin{equation*}
+    \sum_{j=1}^k\alpha_j 
+    =\sum_{j=1}^k\left(-\frac{1}{\lambda}\sum_{i=1}^n\expectation_{\gamma^{(i)}_j}^w\right)
+    =-\frac{1}{\lambda}\sum_{i=1}^n\sum_{j=1}^k\expectation_{\gamma^{(i)}_j}^w
+    =1
+\end{equation*}于是有\begin{equation*}
+    \begin{split}
+        \lambda
+        =&-\sum_{i=1}^{n}\sum_{j=1}^{k}\expectation_{\gamma^{(i)}_j}^w\\
+        =&-\sum_{i=1}^{n}\sum_{j=1}^{k}\frac{
+            \alpha_j^{(i)}f^{(w)}_j(\myvec{y}^{(i)})
+        }{
+            \sum_{t=1}^k\alpha_t^{(i)}f^{(w)}_t(\myvec{y}^{(i)})
+        }\\
+        =&-\sum_{i=1}^{n}\frac{
+            \sum_{j=1}^{k}\alpha_j^{(i)}f^{(w)}_j(\myvec{y}^{(i)})
+        }{
+            \sum_{t=1}^k\alpha_t^{(i)}f^{(w)}_t(\myvec{y}^{(i)})
+        }\\
+        =&-n
+    \end{split}
+\end{equation*}带入到\myeqref{eq:alphaj}中，就有\begin{equation}
+    \alpha_j=\frac{1}{n}\sum_{i=1}^n\expectation_{\gamma^{(i)}_j}^w
+\end{equation}
+
+\item \textbf{ 对\(\myvec{\mu}_j\)求导。}注意到\myeqref{eq:Q}是一个实值函数，因此实值函数对一个向量\(\myvec{\mu}_j\in\mathbb{R}^m\)求导，结果仍然是一个向量，即实值函数对每一个分量求导。我们先来证明，如果矩阵\(\myvec{A}\)是一个对称矩阵，则\begin{equation}
+    \frac{\intd}{\intd \myvec{x}}\left(\myvec{x}^T\myvec{A}\myvec{x}\right)=2\myvec{A}\myvec{x}
+\end{equation}事实上，因为\begin{equation*}
+    \myvec{x}^T\myvec{A}\myvec{x}=\sum_i\sum_j a_{ij}x_ix_j
+\end{equation*}对于某个分量\(x_h\)，我们可以将上式中与\(a_h\)无关的略去，从而得到\begin{equation*}
+    \myvec{x}^T\myvec{A}\myvec{x}\overset{a_h}{\sim}\sum_{i\neq h}a_{ih}x_ix_h+\sum_{j\neq h}a_{hj}x_jx_h+a_{hh}x_h^2
+\end{equation*}因为\(\myvec{A}\)是对称矩阵，因此\(a_{jh}=a_{hj}\)，所以\begin{equation*}
+    \begin{split}
+        \frac{\intd}{\intd x_h}\left(\myvec{x}^T\myvec{A}\myvec{x}\right)
+        \overset{a_h}{\sim}&\frac{\intd}{\intd x_h}\left[\left(2\sum_{i\neq h} a_{ih}x_ix_h\right)+a_{hh}x_h^2\right]\\
+        =&2\left(\sum_{i\neq h} a_{ih}x_i\right)+2a_{hh}x_h\\
+        =&2\sum_i a_{ih}x_i=2\sum_i a_{ih}x_i
+    \end{split}
+\end{equation*}从而\begin{equation*}
+    \begin{split}
+        \frac{\intd}{\intd\myvec{x}}\left(\myvec{x}^T\myvec{A}\myvec{x}\right)
+        &=\begin{bmatrix}
+            \frac{\intd}{\intd x_1}\left(\myvec{x}^T\myvec{A}\myvec{x}\right)&\frac{\intd}{\intd x_2}\left(\myvec{x}^T\myvec{A}\myvec{x}\right)&\cdots&\frac{\intd}{\intd x_m}\left(\myvec{x}^T\myvec{A}\myvec{x}\right)
+        \end{bmatrix}^T\\
+        &=\begin{bmatrix}
+            2\sum_i a_{1i}x_i&2\sum_i a_{2i}x_i&\cdots&2\sum_i a_{mi}x_i
+        \end{bmatrix}^T\\
+        &=2\myvec{A}\myvec{x}
+    \end{split}
+\end{equation*}另外我们还可以推出\begin{gather*}
+    \frac{\intd}{\intd\myvec{x}}\left((\myvec{x}-\myvec{s})^T\myvec{A}(\myvec{x}-\myvec{s})\right)=2\myvec{A}(\myvec{x}-\myvec{s})\\
+    \frac{\intd}{\intd\myvec{s}}\left((\myvec{x}-\myvec{s})^T\myvec{A}(\myvec{x}-\myvec{s})\right)=-2\myvec{A}(\myvec{x}-\myvec{s})
+\end{gather*}这是因为\begin{gather*}
+    \frac{\intd}{\intd x_i}\left((\myvec{x}-\myvec{s})^T\myvec{A}(\myvec{x}-\myvec{s})\right)=\frac{\intd}{\intd (x_i-s_i)}\left((\myvec{x}-\myvec{s})^T\myvec{A}(\myvec{x}-\myvec{s})\right)\\
+    \frac{\intd}{\intd s_i}\left((\myvec{x}-\myvec{s})^T\myvec{A}(\myvec{x}-\myvec{s})\right)=-\frac{\intd}{\intd (x_i-s_i)}\left((\myvec{x}-\myvec{s})^T\myvec{A}(\myvec{x}-\myvec{s})\right)
+\end{gather*}现在我们来求\(\myvec{\mu}_j\)的导数。注意到\myeqref{eq:Q}中与\(\myvec{\mu}_j\)有关的项为\begin{equation}
+    Q_j=\sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w\ln f_j(\myvec{y}^{(i)})
+\end{equation}其中\begin{equation*}
+    \begin{split}
+        &\ln f_j(\myvec{y}^{(i)})\\
+        =&\ln\left[
+            \ngaussiandistvar[m]{\myvec{y}^{(i)}}{\myvec{\mu}_j}{\myvec{\Sigma}_j}
+        \right]\\
+        =&-\frac{1}{2}\left(\myvec{y}^{(i)}-\myvec{\mu}_j\right)^T\myvec{\Sigma}^{-1}_j\left(\myvec{y}^{(i)}-\myvec{\mu}_j\right)+C
+    \end{split}
+\end{equation*}其中\(C=-\ln\left((2\pi)^{m/2}|\myvec{\Sigma}_j|^{1/2}\right)\)是与\(\myvec{\mu}_j\)无关的项。注意到\(\myvec{\Sigma}_j\)是协方差矩阵，因此它是一个对称矩阵，且假设逆矩阵存在，从而对称矩阵的逆矩阵也是一个对称矩阵，于是根据刚才的定理就有\begin{equation}
+    \frac{\partial}{\partial \myvec{\mu}_j}\left(\ln f_j(\myvec{y}^{(i)})\right)=\myvec{\Sigma}_j^{-1}\left(\myvec{y}^{(i)}-\myvec{\mu}_j\right)
+\end{equation}现在我们有\begin{equation}
+    \begin{split}
+        \frac{\partial Q_j}{\partial \myvec{\mu}_j}
+        &=\sum_{i=1}^n \expectation_{\gamma_j^{(i)}}^w\frac{\partial}{\partial\myvec{\mu}_j}\ln f_j(\myvec{y}^{(i)})\\
+        &=\sum_{i=1}^n \expectation_{\gamma_j^{(i)}}^w\myvec{\Sigma}_j^{-1}\left(\myvec{y}^{(i)}-\myvec{\mu}_j\right)\\
+        &=\myvec{\Sigma}_j^{-1}\left(\sum_{i=1}^n \expectation_{\gamma_j^{(i)}}^w\left(\myvec{y}^{(i)}-\myvec{\mu}_j\right)\right)
+    \end{split}
+\end{equation}我们令导向量为\myvec{0}，于是就有\[
+    \myvec{\Sigma}_j^{-1}\left[\sum_{i=1}^n \expectation_{\gamma_j^{(i)}}^w\left(\myvec{y}^{(i)}-\myvec{\mu}_j\right)\right]=\myvec{0}
+\]因为\(\myvec{\Sigma}_j^{-1}\)是可逆矩阵，于是就意味着\[
+    \sum_{i=1}^n \expectation_{\gamma_j^{(i)}}^w\left(\myvec{y}^{(i)}-\myvec{\mu}_j\right)=\myvec{0}
+\]化简后就得到\begin{equation}
+    \myvec{\mu}_j=\frac{
+        \sum_{i=1}^n \expectation_{\gamma_j^{(i)}}^w \myvec{y}^{(i)}    
+    }{
+        \sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w
+    }
+\end{equation}我们是从整体上来考虑了对均值向量\(\myvec{\mu}_j\)求导，其关键在于我们将可逆矩阵\(\myvec{\Sigma}_j^{-1}\)提出来并消去，从而解出\(\myvec{\mu}_j\)。这就是说，如果按照对分量，如第\(h\)个分量\(\mu_{j_h}\)，去考虑，单独对它求导，我们可能无法得出想要的结果，具体来说，如果令\(\sigma_{ij}\)是\(\myvec{\Sigma}_J^{-1}\)中的元素，那么我们可能会求出\begin{equation*}
+    \frac{\partial Q_j}{\partial \mu_{j_h}}=\sum_{i=1}^n\left(\expectation_{\gamma_j^{(i)}}^w\sum_{\xi=1}^m\sigma_{h,\xi}(y^{(i)}_\xi-\mu_{j_\xi})\right)=
+    \sum_{\xi=1}^m\left(
+        \sigma_{h,\xi}\sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w(y^{(i)}_\xi-\mu_{j_\xi})
+    \right)
+\end{equation*}令其为0，从中分解出\(\mu_{j_h}\)，就会得到\begin{equation*}
+    \mu_{j_h}=\frac{
+        \sum_{i=1}^n \expectation_{\gamma_j^{(i)}}^w y_h^{(i)}    
+    }{
+        \sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w
+    }+\frac{
+        \sum_{\xi\neq h}\sigma_{h,\xi}\sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w(y^{(i)}_\xi-\mu_{j,\xi})
+    }{
+        \sigma_{h,h}\sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w
+    }
+\end{equation*}会发现其他\(\mu_{j_\xi}\)无法消去，因此关键点还是在于我们要求出所有分量的导数，并同时令其为0，就有\begin{equation*}
+    \begin{cases}
+        \frac{\partial Q_j}{\partial \mu_{j_1}}=\sum_{\xi=1}^m\left(
+            \sigma_{1,\xi}\sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w(y^{(i)}_\xi-\mu_{j_\xi})
+        \right)=0\\
+        \frac{\partial Q_j}{\partial \mu_{j_2}}=\sum_{\xi=1}^m\left(
+            \sigma_{2,\xi}\sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w(y^{(i)}_\xi-\mu_{j_\xi})
+        \right)=0\\\vdots\\
+        \frac{\partial Q_j}{\partial \mu_{j_k}}=\sum_{\xi=1}^m\left(
+            \sigma_{k,\xi}\sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w(y^{(i)}_\xi-\mu_{j_\xi})
+        \right)=0\\
+    \end{cases}
+\end{equation*}如果我们仔细观察这个联立式，就会发现数列\(\{\sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w(y^{(i)}_\xi-\mu_{j_\xi})\},\xi=1,2,\dotsc,k\)构成了可逆矩阵\(\myvec{\Sigma}_j^{-1}\)列向量的一个线性组合系数，因为列向量是线性无关的，因此线性组合为0当且仅当\(\sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w(y^{(i)}_\xi-\mu_{j_\xi})=0,\xi=1,2,\dotsc,k\)，从而也能得出\[
+    \mu_{j_\xi}=\frac{
+        \sum_{i=1}^n \expectation_{\gamma_j^{(i)}}^w y^{(i)}_\xi
+    }{
+        \sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w
+    }\quad \xi=1,2,\dotsc,k
+\]
+
+\item \textbf{ 对\(\myvec{\Sigma}_j\)求导。}从\myeqref{eq:Q}中删去与\(\myvec{\Sigma}_j\)（求导）无关的项，并展开\(f_j\)，就得到\begin{equation*}
+    Q_j=-\frac{1}{2}\sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w\left(
+        \ln|\myvec{\Sigma}_j|+\left(
+            \myvec{y}^{(i)}-\myvec{\mu}_j
+        \right)^T\myvec{\Sigma}_j^{-1}\left(
+            \myvec{y}^{(i)}-\myvec{\mu}_j
+        \right)
+    \right)
+\end{equation*}根据{\sc Matrix Cookbook}\footnote{
+   \tt https://www.math.uwaterloo.ca/\textasciitilde hwolkowi/matrixcookbook.pdf
+}公式(57)和(67)\begin{gather}
+    \frac{\partial}{\partial\myvec{X}}\ln|\myvec{X}|=\myvec{X}^{-T}\\
+    \frac{\partial}{\partial\myvec{X}}\left(\myvec{a}^T\myvec{X}^{-1}\myvec{b}\right)=-\myvec{X}^{-T}\myvec{a}\myvec{b}^T\myvec{X}^{-T}
+\end{gather}我们有\begin{equation}
+    \begin{split}
+        \frac{\partial Q_j}{\partial\myvec{\Sigma}_j}
+        &=-\frac{1}{2}\sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w \frac{\partial Q_j}{\partial\myvec{\Sigma}_j}\left(
+            \ln|\myvec{\Sigma}_j|+\left(
+                \myvec{y}^{(i)}-\myvec{\mu}_j
+            \right)^T\myvec{\Sigma}_j^{-1}\left(
+                \myvec{y}^{(i)}-\myvec{\mu}_j
+            \right)
+        \right)\\
+        &=-\frac{1}{2}\sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w
+            \left(
+                \myvec{\Sigma}_j^{-T}-\myvec{\Sigma}_j^{-T}\left(
+                    \myvec{y}^{(i)}-\myvec{\mu}_j
+                \right)\left(
+                    \myvec{y}^{(i)}-\myvec{\mu}_j
+                \right)^T\myvec{\Sigma}_j^{-T}
+            \right)\\
+        &=-\frac{1}{2}\sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w
+            \myvec{\Sigma}_j^{-T}\left(
+                \myvec{\Sigma}_j-\left(
+                    \myvec{y}^{(i)}-\myvec{\mu}_j
+                \right)\left(
+                    \myvec{y}^{(i)}-\myvec{\mu}_j
+                \right)^T
+            \right)\myvec{\Sigma}_j^{-T}\\
+        &=\myvec{\Sigma}_j^{-T}\left[-\frac{1}{2}\sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w\left(
+            \myvec{\Sigma}_j-\left(
+                \myvec{y}^{(i)}-\myvec{\mu}_j
+            \right)\left(
+                \myvec{y}^{(i)}-\myvec{\mu}_j
+            \right)^T
+        \right)\right]\myvec{\Sigma}_j^{-T}
+    \end{split}
+\end{equation}令其为\(\myvec{O}\)，消去可逆矩阵\(\myvec{\Sigma}_j^{-T}\)，我们就得到\begin{equation}
+    \myvec{\Sigma}_j=\frac{
+        \sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w
+            \left(
+                \myvec{y}^{(i)}-\myvec{\mu}_j
+            \right)\left(
+                \myvec{y}^{(i)}-\myvec{\mu}_j
+            \right)^T
+    }{
+        \sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w
+    }
+\end{equation}
+\end{itemize}
+
+\subsection{总结}
+根据前面的推导，算法\ref{alg:1}总结了EM算法在高斯混合模型中的应用。作为一个例子，图\ref{pic:4}显示了EM算法拟合由\(\mathcal{N}(6.5.5)\)和\(\mathcal{N}(10,4.3)\)两个分布所产生的样本的混合高斯分布的迭代过程。
+\begin{algorithm}
+    \caption{高斯混合模型参数估计的EM算法}\label{alg:1}
+    \begin{algorithmic}[1] %标出标号
+        \Require
+            样本集合\(Y=\{y^{(1)},y^{(2)},\dotsc,y^{(n)}\}\)
+
+            高斯混合模型（确定混合模型个数$k$）
+        \Ensure
+            高斯混合模型参数$\myvec{\mu},\myvec{\Sigma},\Phi$
+        %%%%%%%%%%%%%%%%%%%
+        \State 给定一个初始参数$\myvec{\mu}^{(0)},\myvec{\Sigma}^{(0)},\Phi^{(0)}$,迭代轮次\(w=0\)
+        \State E步：依据当前模型$\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)}$计算极大似然函数对隐变量\(\myvec{\gamma}\)的期望\[
+            \expectation_{\gamma_j^{(i)}}^w=\frac{
+                \alpha^{(w)}_jf^{(w)}_j(\myvec{y}^{(i)})
+            }{
+                \sum_{j=1}^k\alpha^{(w)}_jf^{(w)}_j(\myvec{y}^{(i)})
+            }\quad j=1,\dotsc,k; i=1,\dotsc,n
+        \]其中\[
+            f_j^{(w)}(\myvec{y}^{(i)})=\ngaussiandistvar[m]{\myvec{y}^{(i)}}{\myvec{\mu}^{(w)}_j}{\myvec{\Sigma}^{(w)}_j}
+        \]
+        \label{alg-1:E-step}
+        \State 计算新一轮迭代参数，其中\(j=1,2,\dotsc,k\)\begin{gather}
+            \alpha^{(w+1)}_j=\frac{1}{n}\sum_{i=1}^n\expectation_{\gamma^{(i)}_j}^w\\
+            \myvec{\mu}^{(w+1)}_j=\frac{
+                \sum_{i=1}^n \expectation_{\gamma_j^{(i)}}^w \myvec{y}^{(i)}    
+            }{
+                \sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w
+            }\\
+            \myvec{\Sigma}^{(w+1)}_j=\frac{
+                \sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w
+                    \left(
+                        \myvec{y}^{(i)}-\myvec{\mu}^{(w)}_j
+                    \right)\left(
+                        \myvec{y}^{(i)}-\myvec{\mu}^{(w)}_j
+                    \right)^T
+            }{
+                \sum_{i=1}^n\expectation_{\gamma_j^{(i)}}^w
+            }
+        \end{gather}
+        \State \( w \gets w+1\)
+        \State 若本轮迭代收敛，返回模型参数$\myvec{\mu}^{(w)},\myvec{\Sigma}^{(w)},\Phi^{(w)}$；否则返回第\ref{alg-1:E-step}步。
+    \end{algorithmic}
+\end{algorithm}
+\begin{figure}
+    \foreach \cnt in {1,...,8}{
+        \tikz\datavisualization[
+                scientific axes,
+                visualize as scatter/.list={
+                    sct1,sct2
+                },
+                visualize as smooth line/.list={
+                    lne1,lne2,lne3
+                },
+                /data point/set/sct1/.initial=1,
+                /data point/set/sct2/.initial=2,
+                /data point/set/lne1/.initial=1,
+                /data point/set/lne2/.initial=2,
+                /data point/set/lne3/.initial=3,
+                style sheet=vary hue,
+                x axis={include value={-15.5,15.5}},
+                y axis={include value={0.2,0},ticks={
+                }},
+            ] 
+            data[set=sct1,read from file=\datafilepath{samples}-1.csv,headline={x},/data point/y=0.001]
+            data[set=sct2,read from file=\datafilepath{samples}-2.csv,headline={x},/data point/y=0.001]
+            data[set=lne1,read from file=\datafilepath{grdtrh}-1.csv,headline={x,y}]
+            data[set=lne2,read from file=\datafilepath{grdtrh}-2.csv,headline={x,y}]
+            data[set=lne3,read from file=\datafilepath{model}-\cnt.csv,headline={x,y}];
+        \pgfmathparse{int(mod(\cnt,2))}
+        \let\ischangline\pgfmathresult
+        \ifnum\ischangline=0
+            \\
+        \fi
+    }
+    \caption{一维高斯分布的拟合曲线。其中样本点由\(\mathcal{N}(6.5.5)\)和\(\mathcal{N}(10,4.3)\)两个分布所产生。}\label{pic:4}
+\end{figure}
+
+\end{document}
